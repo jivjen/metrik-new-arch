@@ -9,18 +9,22 @@ import fitz
 import json
 import typing_extensions as typing
 import os
+from dotenv import load_dotenv
 
-GOOGLE_API_KEY = "AIzaSyBiTmP3mKXTUb13BtpDivIDZ5X5KccFaqU"
-GOOGLE_CSE_ID = "82236a47a9b6e47e6"
+# Load environment variables
+load_dotenv()
+
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+GOOGLE_CSE_ID = os.getenv("GOOGLE_CSE_ID")
 
 google_search = build("customsearch", "v1", developerKey=GOOGLE_API_KEY).cse()
 
-genai.configure(api_key="AIzaSyAViB80an5gX6nJFZY2zQnna57a80OLKwk")
+genai.configure(api_key=os.getenv("GOOGLE_GEMINI_API_KEY"))
 model = genai.GenerativeModel('gemini-1.5-pro-latest')
 
-openai = OpenAI(api_key="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")
+openai = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-os.environ["OPENAI_API_KEY"] = "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"
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 
 
 def generate_table(user_input: str):
@@ -200,7 +204,7 @@ def generate_keywords(user_input: str, sub_question: str) -> List[str]:
 
 def search_web(search_term):
     """Search the Web and obtain a list of web results."""
-    google_search_result = google_search.list(q=search_term, cx="82236a47a9b6e47e6").execute()
+    google_search_result = google_search.list(q=search_term, cx=GOOGLE_CSE_ID).execute()
     urls = []
     search_chunk = {}
     for result in google_search_result["items"]:
@@ -208,7 +212,7 @@ def search_web(search_term):
     for url in urls:
         search_url = f'https://r.jina.ai/{url}'
         headers = {
-            "Authorization": "Bearer jina_cdfde91597854ce89ef3daed22947239autBdM5UrHeOgwRczhd1JYzs51OH"
+            "Authorization": f"Bearer {os.getenv('JINA_API_KEY')}"
         }
         response = requests.get(search_url, headers=headers)
         if response.status_code == 200:
