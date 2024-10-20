@@ -332,30 +332,41 @@ def update_markdown_table(markdown_table: str, sub_question: str, answer: str) -
 
     return update_response.choices[0].message.parsed.updated_table
 
-while check_if_all_cells_are_filled() == False:
-  table = ""
-  with open("table.md", "r") as f:
-    table = f.read()
-  print(table)
-  sub_questions = generate_sub_questions(user_input, table)
-  sub_question = sub_questions[0]
-  print(f"CURRENT SUB-QUESTION: \n {sub_question}")
-  keywords = generate_keywords(user_input, sub_question)
-  print(f"KEYWORDS: \n {keywords}")
-  for keyword in keywords:
-    print(f"KEYWORD: \n {keyword}")
-    search_result = search_web(keyword)
-    print(f"SEARCH RESULT: \n {search_result}")
-    analysis_result = analyze_search_results(search_result, table, sub_question)
-    print(f"ANALYSIS RESULT: \n {analysis_result}")
-    if analysis_result["subQuestionAnswered"] == "yes":
-      print(f"SUB-QUESTION ANSWERED: \n {analysis_result['result']}")
-      table = update_markdown_table(table, sub_question, analysis_result["result"])
-      with open("table.md", "w") as f:
-        f.write(table)
-      break
+import uuid
+import os
 
-print("Processing completed")
+def process_research(user_input: str):
+    job_id = str(uuid.uuid4())
+    os.makedirs(f"jobs/{job_id}", exist_ok=True)
+    
+    table = generate_table(user_input)
+    with open(f"jobs/{job_id}/table.md", "w") as f:
+        f.write(table)
+
+    while not check_if_all_cells_are_filled():
+        with open(f"jobs/{job_id}/table.md", "r") as f:
+            table = f.read()
+        sub_questions = generate_sub_questions(user_input, table)
+        sub_question = sub_questions[0]
+        keywords = generate_keywords(user_input, sub_question)
+        for keyword in keywords:
+            search_result = search_web(keyword)
+            analysis_result = analyze_search_results(search_result, table, sub_question)
+            if analysis_result["subQuestionAnswered"] == "yes":
+                table = update_markdown_table(table, sub_question, analysis_result["result"])
+                with open(f"jobs/{job_id}/table.md", "w") as f:
+                    f.write(table)
+                break
+
+    return job_id
+
+def get_job_status(job_id: str):
+    try:
+        with open(f"jobs/{job_id}/table.md", "r") as f:
+            table = f.read()
+        return {"status": "completed", "table": table}
+    except FileNotFoundError:
+        return {"status": "not_found"}
 
 
 
