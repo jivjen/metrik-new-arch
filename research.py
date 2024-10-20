@@ -1,5 +1,27 @@
-import openai
+from openai import OpenAI
+from tavily import TavilyClient
+from typing import List, Optional, Callable, Dict, Tuple
 from pydantic import BaseModel, Field
+from google.generativeai.types import HarmCategory, HarmBlockThreshold
+from googleapiclient.discovery import build
+import google.generativeai as genai
+import requests
+import fitz
+import json
+import typing_extensions as typing
+import os
+
+GOOGLE_API_KEY = "AIzaSyBiTmP3mKXTUb13BtpDivIDZ5X5KccFaqU"
+GOOGLE_CSE_ID = "82236a47a9b6e47e6"
+
+google_search = build("customsearch", "v1", developerKey=GOOGLE_API_KEY).cse()
+
+genai.configure(api_key="AIzaSyAViB80an5gX6nJFZY2zQnna57a80OLKwk")
+model = genai.GenerativeModel('gemini-1.5-pro-latest')
+
+openai = OpenAI(api_key="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")
+
+os.environ["OPENAI_API_KEY"] = "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"
 
 
 def generate_table(user_input: str):
