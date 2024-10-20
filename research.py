@@ -359,22 +359,29 @@ def update_markdown_table(markdown_table: str, sub_question: str, answer: str) -
 
 import uuid
 import os
+import threading
+
+# Global dictionary to store job status
+job_status = {}
 
 def process_research(user_input: str):
     job_id = str(uuid.uuid4())
     os.makedirs(f"jobs/{job_id}", exist_ok=True)
+    job_status[job_id] = "running"
     
     table = generate_table(user_input)
     with open(f"jobs/{job_id}/table.md", "w") as f:
         f.write(table)
 
-    while not check_if_all_cells_are_filled():
+    while not check_if_all_cells_are_filled() and job_status[job_id] == "running":
         with open(f"jobs/{job_id}/table.md", "r") as f:
             table = f.read()
         sub_questions = generate_sub_questions(user_input, table)
         sub_question = sub_questions[0]
         keywords = generate_keywords(user_input, sub_question)
         for keyword in keywords:
+            if job_status[job_id] != "running":
+                break
             search_result = search_web(keyword)
             analysis_result = analyze_search_results(search_result, table, sub_question)
             if analysis_result["subQuestionAnswered"] == "yes":
@@ -383,15 +390,33 @@ def process_research(user_input: str):
                     f.write(table)
                 break
 
+    if job_status[job_id] == "running":
+        job_status[job_id] = "completed"
+    elif job_status[job_id] == "stopping":
+        job_status[job_id] = "stopped"
+
     return job_id
 
 def get_job_status(job_id: str):
-    try:
-        with open(f"jobs/{job_id}/table.md", "r") as f:
-            table = f.read()
-        return {"status": "completed", "table": table}
-    except FileNotFoundError:
+    if job_id not in job_status:
         return {"status": "not_found"}
+    
+    status = job_status[job_id]
+    if status == "completed":
+        try:
+            with open(f"jobs/{job_id}/table.md", "r") as f:
+                table = f.read()
+            return {"status": status, "table": table}
+        except FileNotFoundError:
+            return {"status": "not_found"}
+    else:
+        return {"status": status}
+
+def stop_job(job_id: str):
+    if job_id in job_status and job_status[job_id] == "running":
+        job_status[job_id] = "stopping"
+        return True
+    return False
 
 
 
