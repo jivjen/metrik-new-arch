@@ -2,7 +2,6 @@ from openai import OpenAI
 from tavily import TavilyClient
 from typing import List, Optional, Callable, Dict, Tuple
 from pydantic import BaseModel, Field
-from google.generativeai.types import HarmCategory, HarmBlockThreshold
 from googleapiclient.discovery import build
 import google.generativeai as genai
 import requests
