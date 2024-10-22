@@ -149,9 +149,9 @@ class CellCheckerResponse(BaseModel):
     allCellsFilled: str = Field(description="Status whether all cells are filled or not")
     emptyCells: List[str] = Field(description="List of empty cells")
 
-def check_if_all_cells_are_filled():
+def check_if_all_cells_are_filled(job_id: str):
   table = ""
-  with open("table.md", "r") as f:
+  with open(f"jobs/{job_id}/table.md", "r") as f:
     table = f.read()
   CELLS_FILLED_CHECKER_USER_PROMPT = f"""
   Input Markdown Table:
@@ -376,21 +376,13 @@ def setup_logger(job_id):
     logger.addHandler(file_handler)
     return logger
 
-def process_research(user_input: str):
-    job_id = str(uuid.uuid4())
+def process_research(user_input: str, job_id: str):
     logger = setup_logger(job_id)
-    logger.info(f"Starting research job with ID: {job_id}")
+    logger.info(f"Continuing research job with ID: {job_id}")
     
-    os.makedirs(f"jobs/{job_id}", exist_ok=True)
     job_status[job_id] = "running"
     
-    logger.info("Generating initial table")
-    table = generate_table(user_input)
-    with open(f"jobs/{job_id}/table.md", "w") as f:
-        f.write(table)
-    logger.info("Initial table generated and saved")
-
-    while not check_if_all_cells_are_filled() and job_status[job_id] == "running":
+    while not check_if_all_cells_are_filled(job_id) and job_status[job_id] == "running":
         logger.info("Starting a new iteration to fill empty cells")
         with open(f"jobs/{job_id}/table.md", "r") as f:
             table = f.read()

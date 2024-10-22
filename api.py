@@ -1,4 +1,5 @@
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
+import uuid
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -43,11 +44,21 @@ class ResearchRequest(BaseModel):
 async def trigger_research(request: ResearchRequest, background_tasks: BackgroundTasks):
     try:
         logger.info(f"Received research request: {request.user_input}")
-        job_id = process_research(request.user_input)
-        thread = threading.Thread(target=process_research, args=(request.user_input,))
-        thread.start()
+        job_id = str(uuid.uuid4())
+        logger.info(f"Generated job ID: {job_id}")
+        
+        # Create the initial table
+        table = generate_table(request.user_input)
+        os.makedirs(f"jobs/{job_id}", exist_ok=True)
+        with open(f"jobs/{job_id}/table.md", "w") as f:
+            f.write(table)
+        logger.info(f"Initial table generated and saved for job {job_id}")
+        
+        # Start the research process in the background
+        background_tasks.add_task(process_research, request.user_input, job_id)
         logger.info(f"Research job started with ID: {job_id}")
-        return {"job_id": job_id}
+        
+        return {"job_id": job_id, "initial_table": table}
     except Exception as e:
         logger.error(f"Error in trigger_research: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
