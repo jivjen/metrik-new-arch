@@ -366,8 +366,9 @@ import time
 from logging.handlers import RotatingFileHandler
 from filelock import FileLock
 
-# Global dictionary to store job status
+# Global dictionary to store job status and stop events
 job_status = {}
+job_stop_events = {}
 
 def setup_logger(job_id):
     logger = logging.getLogger(f"job_{job_id}")
@@ -384,9 +385,13 @@ def process_research(user_input: str, job_id: str):
     logger.info(f"Starting research job with ID: {job_id}")
     
     job_status[job_id] = "running"
+    job_stop_events[job_id] = threading.Event()
     lock = FileLock(f"jobs/{job_id}/table.md.lock")
     
     def check_job_status():
+        if job_stop_events[job_id].is_set():
+            logger.info(f"Stop event set for job {job_id}")
+            return False
         current_status = job_status.get(job_id, "stopped")
         if current_status != "running":
             logger.info(f"Job {job_id} status changed to {current_status}")
@@ -468,6 +473,8 @@ def stop_job(job_id: str):
         current_status = job_status[job_id]
         if current_status in ["running", "stopping"]:
             job_status[job_id] = "stopping"
+            if job_id in job_stop_events:
+                job_stop_events[job_id].set()
             logger.info(f"Stopping job {job_id}. Previous status: {current_status}")
             return True
         else:
@@ -476,6 +483,21 @@ def stop_job(job_id: str):
     else:
         logger.warning(f"Job {job_id} not found")
         return False
+
+    # Wait for the job to actually stop
+    max_wait_time = 30  # Maximum wait time in seconds
+    wait_interval = 0.5  # Check interval in seconds
+    total_wait_time = 0
+
+    while total_wait_time < max_wait_time:
+        if job_status.get(job_id) not in ["running", "stopping"]:
+            logger.info(f"Job {job_id} has stopped. Final status: {job_status.get(job_id)}")
+            return True
+        time.sleep(wait_interval)
+        total_wait_time += wait_interval
+
+    logger.warning(f"Job {job_id} did not stop within the expected time frame")
+    return False
 
     # Wait for the job to actually stop
     max_wait_time = 30  # Maximum wait time in seconds
