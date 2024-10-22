@@ -212,25 +212,31 @@ def generate_keywords(user_input: str, sub_question: str) -> List[str]:
 
     return keyword_generator_response.choices[0].message.parsed.keywords
 
-def search_web(search_term):
+def search_web(search_term, job_id):
     """Search the Web and obtain a list of web results."""
+    logger = logging.getLogger(f"job_{job_id}")
     google_search_result = google_search.list(q=search_term, cx=GOOGLE_CSE_ID).execute()
     urls = []
     search_chunk = {}
     for result in google_search_result["items"]:
         urls.append(result["link"])
     for url in urls:
+        if job_stop_events[job_id].is_set():
+            logger.info(f"Job {job_id} stop event detected during search_web")
+            return json.dumps(search_chunk)
         search_url = f'https://r.jina.ai/{url}'
         headers = {
             "Authorization": f"Bearer {os.getenv('JINA_API_KEY')}"
         }
-        response = requests.get(search_url, headers=headers)
-        if response.status_code == 200:
-            print("Successfully converted")
-            search_chunk[url] = response.text
-        else:
-            print(f"Jina returned an error: {response.status_code}")
-            continue
+        try:
+            response = requests.get(search_url, headers=headers, timeout=10)
+            if response.status_code == 200:
+                logger.info(f"Successfully converted URL: {url}")
+                search_chunk[url] = response.text
+            else:
+                logger.warning(f"Jina returned an error: {response.status_code} for URL: {url}")
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Error fetching URL {url}: {str(e)}")
     return json.dumps(search_chunk)
 
 import json
@@ -447,9 +453,7 @@ def process_research(user_input: str, job_id: str):
                     logger.info("Job status changed, breaking keyword loop")
                     break
                 logger.info(f"Searching web for keyword: {keyword}")
-                with ThreadPoolExecutor(max_workers=1) as executor:
-                    future = executor.submit(search_web, keyword)
-                    search_result = future.result(timeout=30)  # 30 seconds timeout
+                search_result = search_web(keyword, job_id)
                 
                 if not check_job_status():
                     break
