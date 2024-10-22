@@ -48,10 +48,7 @@ async def trigger_research(request: ResearchRequest, background_tasks: Backgroun
         logger.info(f"Generated job ID: {job_id}")
         
         # Create the initial table
-        table = generate_table(request.user_input)
-        os.makedirs(f"jobs/{job_id}", exist_ok=True)
-        with open(f"jobs/{job_id}/table.md", "w") as f:
-            f.write(table)
+        table = generate_table(request.user_input, job_id)
         logger.info(f"Initial table generated and saved for job {job_id}")
         
         # Start the research process in the background

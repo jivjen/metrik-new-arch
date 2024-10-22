@@ -27,7 +27,7 @@ openai = OpenAI(api_key="sk-SDZjr6f9IFZ7ZL6gEiduD_8n34LSV_xZHd6HkKxj5fT3BlbkFJiu
 os.environ["OPENAI_API_KEY"] = "sk-SDZjr6f9IFZ7ZL6gEiduD_8n34LSV_xZHd6HkKxj5fT3BlbkFJiuDxYN1KT2lZoz-zayJbTibSkfyj2COHcDvxlMuz4A"
 
 
-def generate_table(user_input: str):
+def generate_table(user_input: str, job_id: str):
     table_generator_system_prompt = """
     Role: You are an expert researcher and critical thinker.
     Task: Your task is to analyze the user's input and create a hypothetical table that would contain all the required information from the user query.
@@ -55,7 +55,8 @@ def generate_table(user_input: str):
         response_format=TableGeneration
     )
 
-    with open("table.md", "w") as f:
+    os.makedirs(f"jobs/{job_id}", exist_ok=True)
+    with open(f"jobs/{job_id}/table.md", "w") as f:
         f.write(table_generator_response.choices[0].message.parsed.table)
 
     return table_generator_response.choices[0].message.parsed.table
