@@ -362,6 +362,7 @@ import uuid
 import os
 import threading
 import logging
+import time
 from logging.handlers import RotatingFileHandler
 from filelock import FileLock
 
@@ -386,61 +387,68 @@ def process_research(user_input: str, job_id: str):
     lock = FileLock(f"jobs/{job_id}/table.md.lock")
     
     def check_job_status():
-        if job_status[job_id] != "running":
-            logger.info(f"Job {job_id} status changed to {job_status[job_id]}")
+        current_status = job_status.get(job_id, "stopped")
+        if current_status != "running":
+            logger.info(f"Job {job_id} status changed to {current_status}")
             return False
         return True
 
-    while not check_if_all_cells_are_filled(job_id) and check_job_status():
-        logger.info("Starting a new iteration to fill empty cells")
-        with lock:
-            with open(f"jobs/{job_id}/table.md", "r") as f:
-                table = f.read()
-        
-        if not check_job_status():
-            break
-        
-        logger.info("Generating sub-questions")
-        sub_questions = generate_sub_questions(user_input, table)
-        if not sub_questions:
-            logger.info("No more sub-questions to process")
-            break
-        
-        sub_question = sub_questions[0]
-        logger.info(f"Selected sub-question: {sub_question}")
-        
-        if not check_job_status():
-            break
-        
-        logger.info("Generating keywords")
-        keywords = generate_keywords(user_input, sub_question)
-        logger.info(f"Generated keywords: {keywords}")
-        
-        for keyword in keywords:
-            if not check_job_status():
-                logger.info("Job status changed, breaking keyword loop")
-                break
-            logger.info(f"Searching web for keyword: {keyword}")
-            search_result = search_web(keyword)
-            logger.info("Analyzing search results")
-            analysis_result = analyze_search_results(search_result, table, sub_question)
-            if analysis_result["subQuestionAnswered"] == "yes":
-                logger.info("Sub-question answered, updating table")
-                table = update_markdown_table(table, sub_question, analysis_result["result"])
-                with lock:
-                    with open(f"jobs/{job_id}/table.md", "w") as f:
-                        f.write(table)
-                logger.info("Table updated and saved")
-                break
-            else:
-                logger.info("Sub-question not answered with this keyword")
+    try:
+        while not check_if_all_cells_are_filled(job_id) and check_job_status():
+            logger.info("Starting a new iteration to fill empty cells")
+            with lock:
+                with open(f"jobs/{job_id}/table.md", "r") as f:
+                    table = f.read()
             
             if not check_job_status():
                 break
+            
+            logger.info("Generating sub-questions")
+            sub_questions = generate_sub_questions(user_input, table)
+            if not sub_questions:
+                logger.info("No more sub-questions to process")
+                break
+            
+            sub_question = sub_questions[0]
+            logger.info(f"Selected sub-question: {sub_question}")
+            
+            if not check_job_status():
+                break
+            
+            logger.info("Generating keywords")
+            keywords = generate_keywords(user_input, sub_question)
+            logger.info(f"Generated keywords: {keywords}")
+            
+            for keyword in keywords:
+                if not check_job_status():
+                    logger.info("Job status changed, breaking keyword loop")
+                    break
+                logger.info(f"Searching web for keyword: {keyword}")
+                search_result = search_web(keyword)
+                logger.info("Analyzing search results")
+                analysis_result = analyze_search_results(search_result, table, sub_question)
+                if analysis_result["subQuestionAnswered"] == "yes":
+                    logger.info("Sub-question answered, updating table")
+                    table = update_markdown_table(table, sub_question, analysis_result["result"])
+                    with lock:
+                        with open(f"jobs/{job_id}/table.md", "w") as f:
+                            f.write(table)
+                    logger.info("Table updated and saved")
+                    break
+                else:
+                    logger.info("Sub-question not answered with this keyword")
+                
+                if not check_job_status():
+                    break
 
-    final_status = "completed" if job_status[job_id] == "running" else "stopped"
-    job_status[job_id] = final_status
-    logger.info(f"Job {job_id} {final_status}")
+    except Exception as e:
+        logger.error(f"An error occurred during research: {str(e)}", exc_info=True)
+        job_status[job_id] = "error"
+    finally:
+        final_status = job_status[job_id]
+        if final_status == "running":
+            final_status = "completed"
+        logger.info(f"Job {job_id} {final_status}")
 
     return job_id
 
@@ -468,6 +476,21 @@ def stop_job(job_id: str):
     else:
         logger.warning(f"Job {job_id} not found")
         return False
+
+    # Wait for the job to actually stop
+    max_wait_time = 30  # Maximum wait time in seconds
+    wait_interval = 0.5  # Check interval in seconds
+    total_wait_time = 0
+
+    while total_wait_time < max_wait_time:
+        if job_status.get(job_id) not in ["running", "stopping"]:
+            logger.info(f"Job {job_id} has stopped. Final status: {job_status.get(job_id)}")
+            return True
+        time.sleep(wait_interval)
+        total_wait_time += wait_interval
+
+    logger.warning(f"Job {job_id} did not stop within the expected time frame")
+    return False
 
 
 
