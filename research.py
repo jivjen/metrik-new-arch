@@ -17,10 +17,13 @@ load_dotenv()
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 GOOGLE_CSE_ID = os.getenv("GOOGLE_CSE_ID")
+GOOGLE_GEMINI_API_KEY = os.getenv("GOOGLE_GEMINI_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+JINA_API_KEY = os.getenv("JINA_API_KEY")
 
 google_search = build("customsearch", "v1", developerKey=GOOGLE_API_KEY).cse()
 
-genai.configure(api_key=os.getenv("GOOGLE_GEMINI_API_KEY"))
+genai.configure(api_key=GOOGLE_GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-pro-latest')
 
 # Define safety settings
@@ -31,9 +34,9 @@ safety_config = {
     HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
 }
 
-openai = OpenAI(api_key="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")
+openai = OpenAI(api_key=OPENAI_API_KEY)
 
-os.environ["OPENAI_API_KEY"] = "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"
+os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 
 
 def generate_table(user_input: str, job_id: str):
@@ -226,7 +229,7 @@ def search_web(search_term, job_id):
             return json.dumps(search_chunk)
         search_url = f'https://r.jina.ai/{url}'
         headers = {
-            "Authorization": f"Bearer {os.getenv('JINA_API_KEY')}"
+            "Authorization": f"Bearer {JINA_API_KEY}"
         }
         try:
             response = requests.get(search_url, headers=headers)
