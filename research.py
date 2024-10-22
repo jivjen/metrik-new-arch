@@ -483,43 +483,27 @@ def stop_job(job_id: str):
             if job_id in job_stop_events:
                 job_stop_events[job_id].set()
             logger.info(f"Stopping job {job_id}. Previous status: {current_status}")
-            return True
+
+            # Wait for the job to actually stop
+            max_wait_time = 30  # Maximum wait time in seconds
+            wait_interval = 0.5  # Check interval in seconds
+            total_wait_time = 0
+
+            while total_wait_time < max_wait_time:
+                if job_status.get(job_id) not in ["running", "stopping"]:
+                    logger.info(f"Job {job_id} has successfully stopped. Final status: {job_status.get(job_id)}")
+                    return True
+                time.sleep(wait_interval)
+                total_wait_time += wait_interval
+
+            logger.warning(f"Job {job_id} did not stop within the expected time frame")
+            return False
         else:
             logger.warning(f"Cannot stop job {job_id}. Current status: {current_status}")
             return False
     else:
         logger.warning(f"Job {job_id} not found")
         return False
-
-    # Wait for the job to actually stop
-    max_wait_time = 30  # Maximum wait time in seconds
-    wait_interval = 0.5  # Check interval in seconds
-    total_wait_time = 0
-
-    while total_wait_time < max_wait_time:
-        if job_status.get(job_id) not in ["running", "stopping"]:
-            logger.info(f"Job {job_id} has stopped. Final status: {job_status.get(job_id)}")
-            return True
-        time.sleep(wait_interval)
-        total_wait_time += wait_interval
-
-    logger.warning(f"Job {job_id} did not stop within the expected time frame")
-    return False
-
-    # Wait for the job to actually stop
-    max_wait_time = 30  # Maximum wait time in seconds
-    wait_interval = 0.5  # Check interval in seconds
-    total_wait_time = 0
-
-    while total_wait_time < max_wait_time:
-        if job_status.get(job_id) not in ["running", "stopping"]:
-            logger.info(f"Job {job_id} has successfully stopped. Final status: {job_status.get(job_id)}")
-            return True
-        time.sleep(wait_interval)
-        total_wait_time += wait_interval
-
-    logger.warning(f"Job {job_id} did not stop within the expected time frame")
-    return False
 
 def update_job_status(job_id: str, status: str):
     job_status[job_id] = status
