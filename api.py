@@ -54,14 +54,6 @@ async def trigger_research(request: ResearchRequest):
         job_id = str(uuid.uuid4())
         logger.info(f"Generated job ID: {job_id}")
         
-        # Create the initial table
-        try:
-            table = generate_table(request.user_input, job_id)
-            logger.info(f"Initial table generated and saved for job {job_id}")
-        except Exception as table_error:
-            logger.error(f"Error generating initial table for job {job_id}: {str(table_error)}", exc_info=True)
-            raise HTTPException(status_code=500, detail=f"Error generating initial table: {str(table_error)}")
-        
         # Start the research process in a new thread
         try:
             thread = threading.Thread(target=process_research, args=(request.user_input, job_id))
@@ -72,7 +64,7 @@ async def trigger_research(request: ResearchRequest):
             logger.error(f"Error starting research thread for job {job_id}: {str(thread_error)}", exc_info=True)
             raise HTTPException(status_code=500, detail=f"Error starting research process: {str(thread_error)}")
         
-        return {"job_id": job_id, "initial_table": table}
+        return {"job_id": job_id, "message": "Research job started successfully"}
     except Exception as e:
         logger.error(f"Unhandled error in trigger_research: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"An unhandled error occurred: {str(e)}")

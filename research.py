@@ -415,6 +415,14 @@ def process_research(user_input: str, job_id: str):
         return True
 
     try:
+        # Generate initial table
+        try:
+            table = generate_table(user_input, job_id)
+            logger.info(f"Initial table generated and saved for job {job_id}")
+        except Exception as table_error:
+            logger.error(f"Error generating initial table for job {job_id}: {str(table_error)}", exc_info=True)
+            raise Exception(f"Error generating initial table: {str(table_error)}")
+
         while not check_if_all_cells_are_filled(job_id) and check_job_status():
             logger.info("Starting a new iteration to fill empty cells")
             with lock:
