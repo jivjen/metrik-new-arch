@@ -19,6 +19,7 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 GOOGLE_CSE_ID = os.getenv("GOOGLE_CSE_ID")
 GOOGLE_GEMINI_API_KEY = os.getenv("GOOGLE_GEMINI_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+print(f"OPENAI_API_KEY: {OPENAI_API_KEY}")
 JINA_API_KEY = os.getenv("JINA_API_KEY")
 
 google_search = build("customsearch", "v1", developerKey=GOOGLE_API_KEY).cse()
@@ -35,9 +36,6 @@ safety_config = {
 }
 
 openai = OpenAI(api_key=OPENAI_API_KEY)
-
-os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
-
 
 def generate_table(user_input: str, job_id: str):
     table_generator_system_prompt = """
