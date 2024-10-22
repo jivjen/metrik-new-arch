@@ -22,6 +22,26 @@ google_search = build("customsearch", "v1", developerKey=GOOGLE_API_KEY).cse()
 genai.configure(api_key=os.getenv("GOOGLE_GEMINI_API_KEY"))
 model = genai.GenerativeModel('gemini-1.5-pro-latest')
 
+# Define safety settings
+safety_config = [
+    {
+        "category": "HARM_CATEGORY_HARASSMENT",
+        "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+    },
+    {
+        "category": "HARM_CATEGORY_HATE_SPEECH",
+        "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+    },
+    {
+        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+        "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+    },
+    {
+        "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+        "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+    },
+]
+
 openai = OpenAI(api_key="sk-SDZjr6f9IFZ7ZL6gEiduD_8n34LSV_xZHd6HkKxj5fT3BlbkFJiuDxYN1KT2lZoz-zayJbTibSkfyj2COHcDvxlMuz4A")
 
 os.environ["OPENAI_API_KEY"] = "sk-SDZjr6f9IFZ7ZL6gEiduD_8n34LSV_xZHd6HkKxj5fT3BlbkFJiuDxYN1KT2lZoz-zayJbTibSkfyj2COHcDvxlMuz4A"
@@ -224,8 +244,10 @@ def search_web(search_term):
             continue
     return json.dumps(search_chunk)
 
+import json
+
 def analyze_search_results(search_results: Dict[str, str], markdown_table: str, sub_question: str) -> Dict[str, str]:
-    search_analyser_system_prompt = """
+    search_analyser_prompt = f"""
     Role: You are an expert AI assistant specialized in analyzing search results and extracting precise information.
     Task: Given a specific sub-question, a markdown table for context, and a set of search results, your primary task is to determine if the answer to the sub-question can be found within the provided information.
 
@@ -243,43 +265,38 @@ def analyze_search_results(search_results: Dict[str, str], markdown_table: str, 
     6. Do not make assumptions or provide information that is not explicitly stated in the given data.
 
     Main Aim: To provide accurate, source-backed answers to sub-questions when the information is available, and to clearly indicate when the required information cannot be found in the given search results.
-    """
 
-    search_analyser_user_prompt = f"""
     Sub-question: {sub_question}
 
     Markdown Table:
     {markdown_table}
 
     Search Results:
-    {search_results}
+    {json.dumps(search_results)}
 
     Please analyze the search results and determine if the answer to the sub-question can be found.
     """
 
-    class AnalysisResult(BaseModel):
-        subQuestionAnswered: str = Field(description="'yes' if the sub-question is answered, 'no' otherwise")
-        result: str = Field(description="The answer with the source in brackets if found, or an empty string if not found")
+    class GeminiAnalysisResponse(typing.TypedDict):
+        subQuestionAnswered: str
+        result: str
 
-    analysis_response = openai.beta.chat.completions.parse(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": search_analyser_system_prompt},
-            {"role": "user", "content": search_analyser_user_prompt}
-        ],
-        response_format=AnalysisResult
+    response = model.generate_content(
+        search_analyser_prompt,
+        generation_config=genai.GenerationConfig(
+            response_mime_type="application/json",
+            response_schema=GeminiAnalysisResponse
+        ),
+        safety_settings=safety_config
     )
 
-    result = analysis_response.choices[0].message.parsed
+    parsed_response = json.loads(response.candidates[0].content.parts[0].text)
 
-    if result.subQuestionAnswered == "yes":
-        print(f"Sub-question answered: {result.subQuestionAnswered}")
-        print(f"Result: {result.result}")
+    if parsed_response['subQuestionAnswered'] == "yes":
+        print(f"Sub-question answered: {parsed_response['subQuestionAnswered']}")
+        print(f"Result: {parsed_response['result']}")
 
-    return {
-        "subQuestionAnswered": result.subQuestionAnswered,
-        "result": result.result
-    }
+    return parsed_response
 
 def update_markdown_table(markdown_table: str, sub_question: str, answer: str) -> str:
     system_prompt = """
