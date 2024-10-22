@@ -252,7 +252,7 @@ def analyze_search_results(search_results: Dict[str, str], markdown_table: str, 
     {markdown_table}
 
     Search Results:
-    {search_result}
+    {search_results}
 
     Please analyze the search results and determine if the answer to the sub-question can be found.
     """
