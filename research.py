@@ -3,6 +3,7 @@ from tavily import TavilyClient
 from typing import List, Optional, Callable, Dict, Tuple
 from pydantic import BaseModel, Field
 from googleapiclient.discovery import build
+from google.generativeai.types import HarmCategory, HarmBlockThreshold
 import google.generativeai as genai
 import requests
 import fitz
@@ -23,24 +24,12 @@ genai.configure(api_key=os.getenv("GOOGLE_GEMINI_API_KEY"))
 model = genai.GenerativeModel('gemini-1.5-pro-latest')
 
 # Define safety settings
-safety_config = [
-    {
-        "category": "HARM_CATEGORY_HARASSMENT",
-        "threshold": "BLOCK_MEDIUM_AND_ABOVE"
-    },
-    {
-        "category": "HARM_CATEGORY_HATE_SPEECH",
-        "threshold": "BLOCK_MEDIUM_AND_ABOVE"
-    },
-    {
-        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-        "threshold": "BLOCK_MEDIUM_AND_ABOVE"
-    },
-    {
-        "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-        "threshold": "BLOCK_MEDIUM_AND_ABOVE"
-    },
-]
+safety_config = {
+    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+}
 
 openai = OpenAI(api_key="sk-SDZjr6f9IFZ7ZL6gEiduD_8n34LSV_xZHd6HkKxj5fT3BlbkFJiuDxYN1KT2lZoz-zayJbTibSkfyj2COHcDvxlMuz4A")
 
