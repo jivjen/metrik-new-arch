@@ -23,10 +23,16 @@ app = FastAPI()
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    logger.error(f"An error occurred: {str(exc)}", exc_info=True)
+    logger.error(f"An unhandled error occurred: {str(exc)}", exc_info=True)
+    error_details = {
+        "error_type": type(exc).__name__,
+        "error_message": str(exc),
+        "request_method": request.method,
+        "request_url": str(request.url),
+    }
     return JSONResponse(
         status_code=500,
-        content={"detail": f"An error occurred: {str(exc)}"}
+        content={"detail": "An internal server error occurred.", "error_details": error_details}
     )
 
 # Add CORS middleware
@@ -49,19 +55,27 @@ async def trigger_research(request: ResearchRequest):
         logger.info(f"Generated job ID: {job_id}")
         
         # Create the initial table
-        table = generate_table(request.user_input, job_id)
-        logger.info(f"Initial table generated and saved for job {job_id}")
+        try:
+            table = generate_table(request.user_input, job_id)
+            logger.info(f"Initial table generated and saved for job {job_id}")
+        except Exception as table_error:
+            logger.error(f"Error generating initial table for job {job_id}: {str(table_error)}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Error generating initial table: {str(table_error)}")
         
         # Start the research process in a new thread
-        thread = threading.Thread(target=process_research, args=(request.user_input, job_id))
-        thread.start()
-        job_threads[job_id] = thread
-        logger.info(f"Research job started with ID: {job_id}")
+        try:
+            thread = threading.Thread(target=process_research, args=(request.user_input, job_id))
+            thread.start()
+            job_threads[job_id] = thread
+            logger.info(f"Research job started with ID: {job_id}")
+        except Exception as thread_error:
+            logger.error(f"Error starting research thread for job {job_id}: {str(thread_error)}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Error starting research process: {str(thread_error)}")
         
         return {"job_id": job_id, "initial_table": table}
     except Exception as e:
-        logger.error(f"Error in trigger_research: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+        logger.error(f"Unhandled error in trigger_research: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"An unhandled error occurred: {str(e)}")
 
 @app.get("/poll_status/{job_id}")
 async def poll_status(job_id: str):
