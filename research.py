@@ -19,8 +19,13 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 GOOGLE_CSE_ID = os.getenv("GOOGLE_CSE_ID")
 GOOGLE_GEMINI_API_KEY = os.getenv("GOOGLE_GEMINI_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-print(f"OPENAI_API_KEY: {OPENAI_API_KEY}")
 JINA_API_KEY = os.getenv("JINA_API_KEY")
+
+# Validate that all required environment variables are set
+required_env_vars = ["GOOGLE_API_KEY", "GOOGLE_CSE_ID", "GOOGLE_GEMINI_API_KEY", "OPENAI_API_KEY", "JINA_API_KEY"]
+missing_vars = [var for var in required_env_vars if not os.getenv(var)]
+if missing_vars:
+    raise EnvironmentError(f"Missing required environment variables: {', '.join(missing_vars)}")
 
 google_search = build("customsearch", "v1", developerKey=GOOGLE_API_KEY).cse()
 
