@@ -376,6 +376,14 @@ from filelock import FileLock
 job_status = {}
 job_stop_events = {}
 
+# Setup main logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+file_handler = RotatingFileHandler("logs/research.log", maxBytes=10*1024*1024, backupCount=5)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
+
 def setup_logger(job_id):
     logger = logging.getLogger(f"job_{job_id}")
     logger.setLevel(logging.INFO)
