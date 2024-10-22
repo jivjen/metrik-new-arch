@@ -8,6 +8,7 @@ import threading
 import logging
 from logging.handlers import RotatingFileHandler
 import os
+from filelock import FileLock
 
 # Configure logging
 os.makedirs("logs", exist_ok=True)
@@ -67,9 +68,11 @@ async def poll_status(job_id: str):
         status = get_job_status(job_id)
         
         # Read the current table content
+        lock = FileLock(f"jobs/{job_id}/table.md.lock")
         try:
-            with open(f"jobs/{job_id}/table.md", "r") as f:
-                table = f.read()
+            with lock:
+                with open(f"jobs/{job_id}/table.md", "r") as f:
+                    table = f.read()
         except FileNotFoundError:
             logger.warning(f"Table file not found for job {job_id}")
             table = ""

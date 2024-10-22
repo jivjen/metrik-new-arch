@@ -363,6 +363,7 @@ import os
 import threading
 import logging
 from logging.handlers import RotatingFileHandler
+from filelock import FileLock
 
 # Global dictionary to store job status
 job_status = {}
@@ -382,11 +383,13 @@ def process_research(user_input: str, job_id: str):
     logger.info(f"Continuing research job with ID: {job_id}")
     
     job_status[job_id] = "running"
+    lock = FileLock(f"jobs/{job_id}/table.md.lock")
     
     while not check_if_all_cells_are_filled(job_id) and job_status[job_id] == "running":
         logger.info("Starting a new iteration to fill empty cells")
-        with open(f"jobs/{job_id}/table.md", "r") as f:
-            table = f.read()
+        with lock:
+            with open(f"jobs/{job_id}/table.md", "r") as f:
+                table = f.read()
         
         if job_status[job_id] != "running":
             break
@@ -418,8 +421,9 @@ def process_research(user_input: str, job_id: str):
             if analysis_result["subQuestionAnswered"] == "yes":
                 logger.info("Sub-question answered, updating table")
                 table = update_markdown_table(table, sub_question, analysis_result["result"])
-                with open(f"jobs/{job_id}/table.md", "w") as f:
-                    f.write(table)
+                with lock:
+                    with open(f"jobs/{job_id}/table.md", "w") as f:
+                        f.write(table)
                 logger.info("Table updated and saved")
                 break
             else:
