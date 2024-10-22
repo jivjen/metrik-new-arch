@@ -55,14 +55,17 @@ async def trigger_research(request: ResearchRequest):
         logger.info(f"Generated job ID: {job_id}")
         
         # Start the research process in a new thread
-        try:
-            thread = threading.Thread(target=process_research, args=(request.user_input, job_id))
-            thread.start()
-            job_threads[job_id] = thread
-            logger.info(f"Research job started with ID: {job_id}")
-        except Exception as thread_error:
-            logger.error(f"Error starting research thread for job {job_id}: {str(thread_error)}", exc_info=True)
-            raise HTTPException(status_code=500, detail=f"Error starting research process: {str(thread_error)}")
+        def run_research():
+            try:
+                process_research(request.user_input, job_id)
+            except Exception as e:
+                logger.error(f"Error in research process for job {job_id}: {str(e)}", exc_info=True)
+                update_job_status(job_id, "error")
+
+        thread = threading.Thread(target=run_research)
+        thread.start()
+        job_threads[job_id] = thread
+        logger.info(f"Research job started with ID: {job_id}")
         
         return {"job_id": job_id, "message": "Research job started successfully"}
     except Exception as e:

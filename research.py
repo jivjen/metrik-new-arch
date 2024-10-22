@@ -416,12 +416,8 @@ def process_research(user_input: str, job_id: str):
 
     try:
         # Generate initial table
-        try:
-            table = generate_table(user_input, job_id)
-            logger.info(f"Initial table generated and saved for job {job_id}")
-        except Exception as table_error:
-            logger.error(f"Error generating initial table for job {job_id}: {str(table_error)}", exc_info=True)
-            raise Exception(f"Error generating initial table: {str(table_error)}")
+        table = generate_table(user_input, job_id)
+        logger.info(f"Initial table generated and saved for job {job_id}")
 
         while not check_if_all_cells_are_filled(job_id) and check_job_status():
             logger.info("Starting a new iteration to fill empty cells")
@@ -432,7 +428,6 @@ def process_research(user_input: str, job_id: str):
             if not check_job_status():
                 break
             
-            logger.info("Generating sub-questions")
             sub_questions = generate_sub_questions(user_input, table)
             if not sub_questions:
                 logger.info("No more sub-questions to process")
@@ -444,7 +439,6 @@ def process_research(user_input: str, job_id: str):
             if not check_job_status():
                 break
             
-            logger.info("Generating keywords")
             keywords = generate_keywords(user_input, sub_question)
             logger.info(f"Generated keywords: {keywords}")
             
@@ -453,16 +447,9 @@ def process_research(user_input: str, job_id: str):
                     logger.info("Job status changed, breaking keyword loop")
                     break
                 logger.info(f"Searching web for keyword: {keyword}")
-                try:
-                    with ThreadPoolExecutor(max_workers=1) as executor:
-                        future = executor.submit(search_web, keyword)
-                        search_result = future.result(timeout=30)  # 30 seconds timeout
-                except TimeoutError:
-                    logger.warning(f"Search operation timed out for keyword: {keyword}")
-                    continue
-                except Exception as e:
-                    logger.error(f"Error during search operation: {str(e)}")
-                    continue
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(search_web, keyword)
+                    search_result = future.result(timeout=30)  # 30 seconds timeout
                 
                 if not check_job_status():
                     break
@@ -486,6 +473,7 @@ def process_research(user_input: str, job_id: str):
     except Exception as e:
         logger.error(f"An error occurred during research: {str(e)}", exc_info=True)
         update_job_status(job_id, "error")
+        raise  # Re-raise the exception to stop the job
     finally:
         final_status = job_status[job_id]
         if final_status == "running":
