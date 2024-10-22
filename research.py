@@ -22,9 +22,9 @@ google_search = build("customsearch", "v1", developerKey=GOOGLE_API_KEY).cse()
 genai.configure(api_key=os.getenv("GOOGLE_GEMINI_API_KEY"))
 model = genai.GenerativeModel('gemini-1.5-pro-latest')
 
-openai = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+openai = OpenAI(api_key="sk-SDZjr6f9IFZ7ZL6gEiduD_8n34LSV_xZHd6HkKxj5fT3BlbkFJiuDxYN1KT2lZoz-zayJbTibSkfyj2COHcDvxlMuz4A")
 
-os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
+os.environ["OPENAI_API_KEY"] = "sk-SDZjr6f9IFZ7ZL6gEiduD_8n34LSV_xZHd6HkKxj5fT3BlbkFJiuDxYN1KT2lZoz-zayJbTibSkfyj2COHcDvxlMuz4A"
 
 
 def generate_table(user_input: str):
