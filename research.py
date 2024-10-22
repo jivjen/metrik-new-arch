@@ -360,62 +360,101 @@ def update_markdown_table(markdown_table: str, sub_question: str, answer: str) -
 import uuid
 import os
 import threading
+import logging
+from logging.handlers import RotatingFileHandler
 
 # Global dictionary to store job status
 job_status = {}
 
+def setup_logger(job_id):
+    logger = logging.getLogger(f"job_{job_id}")
+    logger.setLevel(logging.INFO)
+    os.makedirs("logs", exist_ok=True)
+    file_handler = RotatingFileHandler(f"logs/job_{job_id}.log", maxBytes=10*1024*1024, backupCount=5)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+    return logger
+
 def process_research(user_input: str):
     job_id = str(uuid.uuid4())
+    logger = setup_logger(job_id)
+    logger.info(f"Starting research job with ID: {job_id}")
+    
     os.makedirs(f"jobs/{job_id}", exist_ok=True)
     job_status[job_id] = "running"
     
+    logger.info("Generating initial table")
     table = generate_table(user_input)
     with open(f"jobs/{job_id}/table.md", "w") as f:
         f.write(table)
+    logger.info("Initial table generated and saved")
 
     while not check_if_all_cells_are_filled() and job_status[job_id] == "running":
+        logger.info("Starting a new iteration to fill empty cells")
         with open(f"jobs/{job_id}/table.md", "r") as f:
             table = f.read()
+        logger.info("Generating sub-questions")
         sub_questions = generate_sub_questions(user_input, table)
         sub_question = sub_questions[0]
+        logger.info(f"Selected sub-question: {sub_question}")
+        logger.info("Generating keywords")
         keywords = generate_keywords(user_input, sub_question)
+        logger.info(f"Generated keywords: {keywords}")
         for keyword in keywords:
             if job_status[job_id] != "running":
+                logger.info("Job status changed, breaking keyword loop")
                 break
+            logger.info(f"Searching web for keyword: {keyword}")
             search_result = search_web(keyword)
+            logger.info("Analyzing search results")
             analysis_result = analyze_search_results(search_result, table, sub_question)
             if analysis_result["subQuestionAnswered"] == "yes":
+                logger.info("Sub-question answered, updating table")
                 table = update_markdown_table(table, sub_question, analysis_result["result"])
                 with open(f"jobs/{job_id}/table.md", "w") as f:
                     f.write(table)
+                logger.info("Table updated and saved")
                 break
+            else:
+                logger.info("Sub-question not answered with this keyword")
 
     if job_status[job_id] == "running":
         job_status[job_id] = "completed"
+        logger.info("Job completed successfully")
     elif job_status[job_id] == "stopping":
         job_status[job_id] = "stopped"
+        logger.info("Job stopped by user request")
 
     return job_id
 
 def get_job_status(job_id: str):
+    logger = logging.getLogger(f"job_{job_id}")
     if job_id not in job_status:
+        logger.warning(f"Status requested for non-existent job: {job_id}")
         return {"status": "not_found"}
     
     status = job_status[job_id]
+    logger.info(f"Status requested for job {job_id}: {status}")
     if status == "completed":
         try:
             with open(f"jobs/{job_id}/table.md", "r") as f:
                 table = f.read()
+            logger.info(f"Returning completed table for job {job_id}")
             return {"status": status, "table": table}
         except FileNotFoundError:
+            logger.error(f"Table file not found for completed job {job_id}")
             return {"status": "not_found"}
     else:
         return {"status": status}
 
 def stop_job(job_id: str):
+    logger = logging.getLogger(f"job_{job_id}")
     if job_id in job_status and job_status[job_id] == "running":
         job_status[job_id] = "stopping"
+        logger.info(f"Stopping job {job_id}")
         return True
+    logger.warning(f"Attempt to stop non-running job {job_id}")
     return False
 
 
