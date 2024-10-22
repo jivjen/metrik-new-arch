@@ -7,7 +7,7 @@ import google.generativeai as genai
 import requests
 import fitz
 import json
-import typing_extensions as typing
+import typing
 import os
 from dotenv import load_dotenv
 
