@@ -390,6 +390,7 @@ job_threads = {}
 # Setup main logger
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+os.makedirs("logs", exist_ok=True)
 file_handler = RotatingFileHandler("logs/research.log", maxBytes=10*1024*1024, backupCount=5)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 file_handler.setFormatter(formatter)

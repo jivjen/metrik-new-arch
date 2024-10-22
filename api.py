@@ -19,6 +19,9 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
+# Ensure the jobs directory exists
+os.makedirs("jobs", exist_ok=True)
+
 app = FastAPI()
 
 @app.exception_handler(Exception)
