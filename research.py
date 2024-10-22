@@ -55,6 +55,7 @@ def generate_table(user_input: str, job_id: str):
     4. Make the row and column headers descriptive enough that they contain sufficient information for a search agent to instantly query the needed information from the internet.
     5. Output the table in Markdown format ONLY.
     6. ONLY If the number of rows or columns are not available in the user input, keep it as MAX = 5
+    7. The table need not have an index or serial number column with row numbers. Just the actual rows and columns are needed.
     """
 
     table_generator_user_content = f"Analyze and generate a table for the following user input: {user_input}"
