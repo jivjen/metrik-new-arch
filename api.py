@@ -65,6 +65,18 @@ async def poll_status(job_id: str):
     try:
         logger.info(f"Polling status for job: {job_id}")
         status = get_job_status(job_id)
+        
+        # Read the current table content
+        try:
+            with open(f"jobs/{job_id}/table.md", "r") as f:
+                table = f.read()
+        except FileNotFoundError:
+            logger.warning(f"Table file not found for job {job_id}")
+            table = ""
+        
+        # Add the table content to the status response
+        status["table"] = table
+        
         logger.info(f"Status for job {job_id}: {status}")
         return status
     except Exception as e:

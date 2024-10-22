@@ -445,17 +445,7 @@ def get_job_status(job_id: str):
     
     status = job_status[job_id]
     logger.info(f"Status requested for job {job_id}: {status}")
-    if status == "completed":
-        try:
-            with open(f"jobs/{job_id}/table.md", "r") as f:
-                table = f.read()
-            logger.info(f"Returning completed table for job {job_id}")
-            return {"status": status, "table": table}
-        except FileNotFoundError:
-            logger.error(f"Table file not found for completed job {job_id}")
-            return {"status": "not_found"}
-    else:
-        return {"status": status}
+    return {"status": status}
 
 def stop_job(job_id: str):
     logger = logging.getLogger(f"job_{job_id}")
