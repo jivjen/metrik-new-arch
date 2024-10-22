@@ -3,7 +3,7 @@ import uuid
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from research import process_research, get_job_status, stop_job
+from research import process_research, get_job_status, stop_job, generate_table
 import threading
 import logging
 from logging.handlers import RotatingFileHandler
