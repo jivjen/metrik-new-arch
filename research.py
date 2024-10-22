@@ -11,6 +11,7 @@ import json
 import typing
 import os
 from dotenv import load_dotenv
+import typing_extensions as typing
 
 # Load environment variables
 load_dotenv()
@@ -273,11 +274,11 @@ def analyze_search_results(search_results: Dict[str, str], markdown_table: str, 
     {markdown_table}
 
     Search Results:
-    {json.dumps(search_results)}
+    {search_results}
 
     Please analyze the search results and determine if the answer to the sub-question can be found.
     """
-
+    print(f"Search Results {search_results}")
     class GeminiAnalysisResponse(typing.TypedDict):
         subQuestionAnswered: str
         result: str
@@ -290,6 +291,8 @@ def analyze_search_results(search_results: Dict[str, str], markdown_table: str, 
         ),
         safety_settings=safety_config
     )
+
+    print(f"RAW GEMINI RESPONSE - {response.candidates[0].content.parts[0].text}")
 
     parsed_response = json.loads(response.candidates[0].content.parts[0].text)
 
