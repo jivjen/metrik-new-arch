@@ -386,13 +386,26 @@ def process_research(user_input: str, job_id: str):
         logger.info("Starting a new iteration to fill empty cells")
         with open(f"jobs/{job_id}/table.md", "r") as f:
             table = f.read()
+        
+        if job_status[job_id] != "running":
+            break
+        
         logger.info("Generating sub-questions")
         sub_questions = generate_sub_questions(user_input, table)
+        if not sub_questions:
+            logger.info("No more sub-questions to process")
+            break
+        
         sub_question = sub_questions[0]
         logger.info(f"Selected sub-question: {sub_question}")
+        
+        if job_status[job_id] != "running":
+            break
+        
         logger.info("Generating keywords")
         keywords = generate_keywords(user_input, sub_question)
         logger.info(f"Generated keywords: {keywords}")
+        
         for keyword in keywords:
             if job_status[job_id] != "running":
                 logger.info("Job status changed, breaking keyword loop")
@@ -410,6 +423,9 @@ def process_research(user_input: str, job_id: str):
                 break
             else:
                 logger.info("Sub-question not answered with this keyword")
+        
+        if job_status[job_id] != "running":
+            break
 
     if job_status[job_id] == "running":
         job_status[job_id] = "completed"
@@ -442,12 +458,20 @@ def get_job_status(job_id: str):
 
 def stop_job(job_id: str):
     logger = logging.getLogger(f"job_{job_id}")
-    if job_id in job_status and job_status[job_id] == "running":
-        job_status[job_id] = "stopping"
-        logger.info(f"Stopping job {job_id}")
-        return True
-    logger.warning(f"Attempt to stop non-running job {job_id}")
-    return False
+    if job_id in job_status:
+        if job_status[job_id] == "running":
+            job_status[job_id] = "stopping"
+            logger.info(f"Stopping job {job_id}")
+            return True
+        elif job_status[job_id] == "stopping":
+            logger.info(f"Job {job_id} is already in the process of stopping")
+            return True
+        else:
+            logger.warning(f"Cannot stop job {job_id}. Current status: {job_status[job_id]}")
+            return False
+    else:
+        logger.warning(f"Job {job_id} not found")
+        return False
 
 
 
