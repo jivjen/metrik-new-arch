@@ -31,9 +31,9 @@ safety_config = {
     HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
 }
 
-openai = OpenAI(api_key="sk-SDZjr6f9IFZ7ZL6gEiduD_8n34LSV_xZHd6HkKxj5fT3BlbkFJiuDxYN1KT2lZoz-zayJbTibSkfyj2COHcDvxlMuz4A")
+openai = OpenAI(api_key="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")
 
-os.environ["OPENAI_API_KEY"] = "sk-SDZjr6f9IFZ7ZL6gEiduD_8n34LSV_xZHd6HkKxj5fT3BlbkFJiuDxYN1KT2lZoz-zayJbTibSkfyj2COHcDvxlMuz4A"
+os.environ["OPENAI_API_KEY"] = "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"
 
 
 def generate_table(user_input: str, job_id: str):
