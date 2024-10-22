@@ -454,12 +454,13 @@ def process_research(user_input: str, job_id: str):
 
     except Exception as e:
         logger.error(f"An error occurred during research: {str(e)}", exc_info=True)
-        job_status[job_id] = "error"
+        update_job_status(job_id, "error")
     finally:
         final_status = job_status[job_id]
         if final_status == "running":
             final_status = "completed"
-        logger.info(f"Job {job_id} {final_status}")
+        update_job_status(job_id, final_status)
+        logger.info(f"Job {job_id} has finished with status: {final_status}")
 
     return job_id
 
@@ -512,13 +513,17 @@ def stop_job(job_id: str):
 
     while total_wait_time < max_wait_time:
         if job_status.get(job_id) not in ["running", "stopping"]:
-            logger.info(f"Job {job_id} has stopped. Final status: {job_status.get(job_id)}")
+            logger.info(f"Job {job_id} has successfully stopped. Final status: {job_status.get(job_id)}")
             return True
         time.sleep(wait_interval)
         total_wait_time += wait_interval
 
     logger.warning(f"Job {job_id} did not stop within the expected time frame")
     return False
+
+def update_job_status(job_id: str, status: str):
+    job_status[job_id] = status
+    logger.info(f"Job {job_id} status updated to: {status}")
 
 
 
