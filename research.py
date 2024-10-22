@@ -371,10 +371,12 @@ import logging
 import time
 from logging.handlers import RotatingFileHandler
 from filelock import FileLock
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
 
 # Global dictionary to store job status and stop events
 job_status = {}
 job_stop_events = {}
+job_threads = {}
 
 # Setup main logger
 logger = logging.getLogger(__name__)
@@ -443,7 +445,20 @@ def process_research(user_input: str, job_id: str):
                     logger.info("Job status changed, breaking keyword loop")
                     break
                 logger.info(f"Searching web for keyword: {keyword}")
-                search_result = search_web(keyword)
+                try:
+                    with ThreadPoolExecutor(max_workers=1) as executor:
+                        future = executor.submit(search_web, keyword)
+                        search_result = future.result(timeout=30)  # 30 seconds timeout
+                except TimeoutError:
+                    logger.warning(f"Search operation timed out for keyword: {keyword}")
+                    continue
+                except Exception as e:
+                    logger.error(f"Error during search operation: {str(e)}")
+                    continue
+                
+                if not check_job_status():
+                    break
+                
                 logger.info("Analyzing search results")
                 analysis_result = analyze_search_results(search_result, table, sub_question)
                 if analysis_result["subQuestionAnswered"] == "yes":
@@ -504,8 +519,20 @@ def stop_job(job_id: str):
                 time.sleep(wait_interval)
                 total_wait_time += wait_interval
 
-            logger.warning(f"Job {job_id} did not stop within the expected time frame")
-            return False
+            # If the job hasn't stopped, force terminate the thread
+            if job_id in job_threads:
+                logger.warning(f"Force terminating job {job_id}")
+                job_threads[job_id].join(timeout=1)  # Give it one last second to finish
+                if job_threads[job_id].is_alive():
+                    logger.error(f"Failed to terminate job {job_id}")
+                    return False
+                else:
+                    logger.info(f"Job {job_id} has been forcefully terminated")
+                    job_status[job_id] = "terminated"
+                    return True
+            else:
+                logger.warning(f"Job {job_id} thread not found")
+                return False
         else:
             logger.warning(f"Cannot stop job {job_id}. Current status: {current_status}")
             return False

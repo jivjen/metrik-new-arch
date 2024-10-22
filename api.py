@@ -1,9 +1,9 @@
-from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request
 import uuid
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from research import process_research, get_job_status, stop_job, generate_table
+from research import process_research, get_job_status, stop_job, generate_table, job_threads
 import threading
 import logging
 from logging.handlers import RotatingFileHandler
@@ -42,7 +42,7 @@ class ResearchRequest(BaseModel):
     user_input: str
 
 @app.post("/trigger_research")
-async def trigger_research(request: ResearchRequest, background_tasks: BackgroundTasks):
+async def trigger_research(request: ResearchRequest):
     try:
         logger.info(f"Received research request: {request.user_input}")
         job_id = str(uuid.uuid4())
@@ -52,8 +52,10 @@ async def trigger_research(request: ResearchRequest, background_tasks: Backgroun
         table = generate_table(request.user_input, job_id)
         logger.info(f"Initial table generated and saved for job {job_id}")
         
-        # Start the research process in the background
-        background_tasks.add_task(process_research, request.user_input, job_id)
+        # Start the research process in a new thread
+        thread = threading.Thread(target=process_research, args=(request.user_input, job_id))
+        thread.start()
+        job_threads[job_id] = thread
         logger.info(f"Research job started with ID: {job_id}")
         
         return {"job_id": job_id, "initial_table": table}
