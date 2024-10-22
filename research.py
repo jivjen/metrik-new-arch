@@ -380,18 +380,24 @@ def setup_logger(job_id):
 
 def process_research(user_input: str, job_id: str):
     logger = setup_logger(job_id)
-    logger.info(f"Continuing research job with ID: {job_id}")
+    logger.info(f"Starting research job with ID: {job_id}")
     
     job_status[job_id] = "running"
     lock = FileLock(f"jobs/{job_id}/table.md.lock")
     
-    while not check_if_all_cells_are_filled(job_id) and job_status[job_id] == "running":
+    def check_job_status():
+        if job_status[job_id] != "running":
+            logger.info(f"Job {job_id} status changed to {job_status[job_id]}")
+            return False
+        return True
+
+    while not check_if_all_cells_are_filled(job_id) and check_job_status():
         logger.info("Starting a new iteration to fill empty cells")
         with lock:
             with open(f"jobs/{job_id}/table.md", "r") as f:
                 table = f.read()
         
-        if job_status[job_id] != "running":
+        if not check_job_status():
             break
         
         logger.info("Generating sub-questions")
@@ -403,7 +409,7 @@ def process_research(user_input: str, job_id: str):
         sub_question = sub_questions[0]
         logger.info(f"Selected sub-question: {sub_question}")
         
-        if job_status[job_id] != "running":
+        if not check_job_status():
             break
         
         logger.info("Generating keywords")
@@ -411,7 +417,7 @@ def process_research(user_input: str, job_id: str):
         logger.info(f"Generated keywords: {keywords}")
         
         for keyword in keywords:
-            if job_status[job_id] != "running":
+            if not check_job_status():
                 logger.info("Job status changed, breaking keyword loop")
                 break
             logger.info(f"Searching web for keyword: {keyword}")
@@ -428,16 +434,13 @@ def process_research(user_input: str, job_id: str):
                 break
             else:
                 logger.info("Sub-question not answered with this keyword")
-        
-        if job_status[job_id] != "running":
-            break
+            
+            if not check_job_status():
+                break
 
-    if job_status[job_id] == "running":
-        job_status[job_id] = "completed"
-        logger.info("Job completed successfully")
-    elif job_status[job_id] == "stopping":
-        job_status[job_id] = "stopped"
-        logger.info("Job stopped by user request")
+    final_status = "completed" if job_status[job_id] == "running" else "stopped"
+    job_status[job_id] = final_status
+    logger.info(f"Job {job_id} {final_status}")
 
     return job_id
 
@@ -454,15 +457,13 @@ def get_job_status(job_id: str):
 def stop_job(job_id: str):
     logger = logging.getLogger(f"job_{job_id}")
     if job_id in job_status:
-        if job_status[job_id] == "running":
+        current_status = job_status[job_id]
+        if current_status in ["running", "stopping"]:
             job_status[job_id] = "stopping"
-            logger.info(f"Stopping job {job_id}")
-            return True
-        elif job_status[job_id] == "stopping":
-            logger.info(f"Job {job_id} is already in the process of stopping")
+            logger.info(f"Stopping job {job_id}. Previous status: {current_status}")
             return True
         else:
-            logger.warning(f"Cannot stop job {job_id}. Current status: {job_status[job_id]}")
+            logger.warning(f"Cannot stop job {job_id}. Current status: {current_status}")
             return False
     else:
         logger.warning(f"Job {job_id} not found")
