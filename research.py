@@ -229,7 +229,7 @@ def search_web(search_term, job_id):
             "Authorization": f"Bearer {os.getenv('JINA_API_KEY')}"
         }
         try:
-            response = requests.get(search_url, headers=headers, timeout=10)
+            response = requests.get(search_url, headers=headers)
             if response.status_code == 200:
                 logger.info(f"Successfully converted URL: {url}")
                 search_chunk[url] = response.text
